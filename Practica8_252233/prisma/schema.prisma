@@ -1,0 +1,59 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum EstadoInscripcion {
+  CONFIRMADA
+  CANCELADA
+}
+
+model Clase {
+  id          Int       @id @default(autoincrement())
+  nombre      String
+  descripcion String?
+  horarios    Horario[]
+
+  @@map("clase")
+}
+
+model Horario {
+  id            Int           @id @default(autoincrement())
+  diaSemana     String        @map("dia_semana")
+  horaInicio    String        @map("hora_inicio")
+  horaFin       String        @map("hora_fin")
+  capacidad     Int
+  claseId       Int           @map("clase_id")
+  clase         Clase         @relation(fields: [claseId], references: [id])
+  inscripciones Inscripcion[]
+
+  @@map("horario")
+}
+
+model Miembro {
+  id            Int           @id @default(autoincrement())
+  nombre        String
+  correo        String        @unique
+  telefono      String?
+  inscripciones Inscripcion[]
+
+  @@map("miembro")
+}
+
+model Inscripcion {
+  id        Int               @id @default(autoincrement())
+  fecha     DateTime          @default(now())
+  estado    EstadoInscripcion @default(CONFIRMADA)
+  horarioId Int               @map("horario_id")
+  miembroId Int               @map("miembro_id")
+
+  horario Horario @relation(fields: [horarioId], references: [id])
+  miembro Miembro @relation(fields: [miembroId], references: [id])
+
+  @@unique([horarioId, miembroId])
+  @@map("inscripcion")
+}
