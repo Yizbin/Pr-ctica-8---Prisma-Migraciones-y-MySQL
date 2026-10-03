@@ -1,45 +1,53 @@
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import {
+  CupoLlenoError,
+  ErrorDeDominio,
+  HorarioNoEncontradoError,
+  InscripcionDuplicadaError,
+  MiembroNoEncontradoError,
+} from '../../inscripciones/dominio/errores';
 
-@Catch()
-export class ExcepcionesDominioFilter implements ExceptionFilter {
-  catch(exception: any, host: ArgumentsHost) {
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+@Catch(ErrorDeDominio)
+export class DominioExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('Dominio');
 
-    let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = exception.message || 'Error interno del servidor';
-
-    const nombreError = exception.constructor?.name || '';
-
+  private codigoPara(error: ErrorDeDominio): number {
     if (
-      nombreError.includes('NoEncontrado') ||
-      message.toLowerCase().includes('no encontrad')
+      error instanceof HorarioNoEncontradoError ||
+      error instanceof MiembroNoEncontradoError
     ) {
-      status = HttpStatus.NOT_FOUND;
-    } else if (
-      nombreError.includes('CupoLleno') ||
-      nombreError.includes('Duplicad') ||
-      message.toLowerCase().includes('cupo') ||
-      message.toLowerCase().includes('ya está inscrito')
-    ) {
-      status = HttpStatus.CONFLICT;
-    } else if (exception.status) {
-      status = exception.status;
-      message = exception.response?.message || exception.message;
+      return HttpStatus.NOT_FOUND;
     }
+    if (
+      error instanceof CupoLlenoError ||
+      error instanceof InscripcionDuplicadaError
+    ) {
+      return HttpStatus.CONFLICT;
+    }
+    return HttpStatus.INTERNAL_SERVER_ERROR;
+  }
 
-    response.status(status).json({
-      statusCode: status,
+  catch(error: ErrorDeDominio, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const res = ctx.getResponse<Response>();
+    const estado = this.codigoPara(error);
+    const req = ctx.getRequest<{ url: string; method: string }>();
+
+    this.logger.warn(`${req.method} ${req.url} -> ${estado} ${error.constructor.name}`);
+
+    res.status(estado).json({
+      statusCode: estado,
+      error: error.constructor.name,
+      message: error.message,
+      path: req.url,
       timestamp: new Date().toISOString(),
-      path: request.url,
-      message: message,
     });
   }
 }

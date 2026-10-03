@@ -1,23 +1,25 @@
-export class HorarioNoEncontradoError extends Error {
+export abstract class ErrorDeDominio extends Error {}
+
+export class HorarioNoEncontradoError extends ErrorDeDominio {
   constructor(horarioId: number) {
     super(`No existe el horario ${horarioId}`);
   }
 }
 
-export class MiembroNoEncontradoError extends Error {
+export class MiembroNoEncontradoError extends ErrorDeDominio {
   constructor(miembroId: number) {
     super(`No existe el miembro ${miembroId}`);
   }
 }
 
-export class CupoLlenoError extends Error {
-  constructor(horarioId: number, cupoMaximo: number) {
-    super(`El horario ${horarioId} ya tiene ${cupoMaximo} inscripciones confirmadas`);
+export class CupoLlenoError extends ErrorDeDominio {
+  constructor() {
+    super('El horario ya no tiene cupo disponible');
   }
 }
 
-export class InscripcionDuplicadaError extends Error {
-  constructor(horarioId: number, miembroId: number) {
-    super(`El miembro ${miembroId} ya esta inscrito en el horario ${horarioId}`);
+export class InscripcionDuplicadaError extends ErrorDeDominio {
+  constructor() {
+    super('El miembro ya está inscrito en este horario');
   }
 }
